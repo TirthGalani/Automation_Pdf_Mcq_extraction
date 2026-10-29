@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCQ PDF Extractor — Gemini AI</title>
+  <meta name="description"
+    content="AI-powered exam MCQ extraction system preserving 2-column layouts, math formulas, diagrams, options, and solutions.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <!-- KaTeX: Fast LaTeX rendering for inline and block math formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+  <!-- KaTeX loaded synchronously (no defer) so katex global is always available when JS runs -->
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <!-- math.js: Full-featured numerical math library for expression evaluation -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@13.0.3/lib/browser/math.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="css/styles.css?v=6.6">
+</head>
+
+<body class="light-theme">
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-badge">
+        <div class="logo-icon">✨</div>
+        <div class="logo-text">
+          <span class="logo-title">MCQ Extract<span class="gradient-text">AI</span></span>
+          <span class="logo-subtitle">Gemini Multimodal MCQ &amp; Solution Extractor</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="status-chip" id="apiStatusBadge">
+        <span class="status-dot"></span>
+        <span class="status-label">Checking Backend...</span>
+      </div>
+
+      <!-- Live API Quota & Limit Tracker Badge -->
+      <div class="quota-pill" id="quotaPill" title="Click to view Gemini API Daily Quota &amp; Limit Remaining Details">
+        <span class="quota-dot"></span>
+        <span class="quota-label">Quota: <strong id="quotaPercentLabel">100% Available</strong></span>
+        <div class="quota-progress-mini">
+          <div class="quota-progress-mini-bar" id="quotaMiniBar" style="width: 100%;"></div>
+        </div>
+      </div>
+
+      <button id="openLiveLogsBtn" class="btn btn-secondary btn-sm" title="View Real-Time System &amp; Extraction Logs">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 17 10 11 4 5"></polyline>
+          <line x1="12" y1="19" x2="20" y2="19"></line>
+        </svg>
+        <span>Live Logs</span>
+      </button>
+
+      <button id="openDownloadCenterBtn" class="btn btn-secondary btn-sm"
+        title="View Processed Files & Download Options">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+        </svg>
+        <span>Download Options</span>
+      </button>
+
+      <button id="openApiKeyModalBtn" class="btn btn-secondary btn-sm" title="Configure Gemini API Key">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path
+            d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+        </svg>
+        <span>API Key</span>
+      </button>
+
+      <div class="select-wrapper" style="min-width: 290px;">
+        <select id="modelSelector" class="form-select select-sm" style="font-weight: 600; cursor: pointer; border-radius: 8px; border: 1.5px solid #cbd5e1; min-width: 330px;">
+          <optgroup label="🌟 Gemini 3.x (Latest & Recommended)">
+            <option value="gemini-3.5-flash" selected>⚡ Gemini 3.5 Flash (Recommended)</option>
+            <option value="gemini-3.6-flash">⚡ Gemini 3.6 Flash (Next-Gen Fast)</option>
+            <option value="gemini-3.7-flash">⚡ Gemini 3.7 Flash (Hybrid Fast)</option>
+            <option value="gemini-3.7-flash-lite">⚡ Gemini 3.7 Flash-Lite (High Speed)</option>
+            <option value="gemini-3.5-flash-lite">⚡ Gemini 3.5 Flash-Lite</option>
+            <option value="gemini-3.1-pro">🧠 Gemini 3.1 Pro (Deep Multimodal)</option>
+            <option value="gemini-3.1-flash-lite">⚡ Gemini 3.1 Flash-Lite</option>
+          </optgroup>
+          <optgroup label="🚀 Gemini 2.x Series">
+            <option value="gemini-2.5-flash">⚡ Gemini 2.5 Flash (Fast & Accurate)</option>
+            <option value="gemini-2.5-pro">🧠 Gemini 2.5 Pro (Deep Math & Vision)</option>
+            <option value="gemini-2.0-flash">⚡ Gemini 2.0 Flash</option>
+            <option value="gemini-2.0-flash-lite">⚡ Gemini 2.0 Flash-Lite</option>
+          </optgroup>
+          <optgroup label="📦 Gemini 1.5 Series (High Quota)">
+            <option value="gemini-1.5-flash">⚡ Gemini 1.5 Flash</option>
+            <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro</option>
+          </optgroup>
+          <optgroup label="💎 Gemma Open-Weight Series">
+            <option value="gemma-4-26b-a4b-it">💎 Gemma 4 26B A4B (MoE Multimodal)</option>
+            <option value="gemma-4-31b-it">💎 Gemma 4 31B (Multimodal)</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="app-container">
+    <!-- Left Upload Sidebar -->
+    <aside class="sidebar-panel">
+      <!-- Dual Upload Zone Card -->
+      <section class="card upload-card">
+        <div class="card-header" style="margin-bottom: 0.6rem;">
+          <h2 class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+            </svg>
+            PDF Uploads
+          </h2>
+          <span class="badge" id="fileCountBadge">0 files</span>
+        </div>
+
+        <!-- 1. Textbook PDF Upload Slot (For Topic & Chapter Structure) -->
+        <div class="dropzone-col textbook-upload-slot" style="margin-bottom: 0.65rem;">
+          <div class="dropzone-col-header">
+            <span class="col-title" style="color: #6b21a8;">📚 Textbook PDF(s)</span>
+            <span class="col-hint" style="color: #7c3aed; font-weight: 700;">Topics &amp; Chapters (Multiple Allowed)</span>
+          </div>
+          <div class="dropzone" id="textbookDropzone" style="border-color: #c4b5fd; background: #faf5ff; padding: 0.75rem 0.5rem;">
+            <input type="file" id="textbookFileInput" accept=".pdf" multiple class="file-input-hidden">
+            <div class="dropzone-content" style="padding: 0.2rem 0;">
+              <div class="upload-icon-circle" style="background:#f3e8ff; color:#7c3aed; width: 32px; height: 32px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+              </div>
+              <p class="dropzone-text" style="font-size: 0.85rem; margin-top: 0.25rem;"><strong>Browse or Drop Textbook PDF(s)</strong></p>
+              <p class="dropzone-hint" style="font-size: 0.7rem;">Upload one or multiple textbooks to extract topics &amp; chapters</p>
+            </div>
+          </div>
+          <!-- Textbook Files selected indicator -->
+          <div id="textbookFileInfo" class="hidden" style="margin-top:0.4rem; padding:0.4rem 0.6rem; background:#faf5ff; border:1px solid #ddd6fe; border-radius:6px; font-size:0.76rem; color:#6b21a8; display:flex; flex-direction:column; gap:0.3rem;">
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              <span id="textbookFileCount" style="font-weight:700;">Textbooks (0):</span>
+              <button id="clearTextbookBtn" style="margin-left:auto; background:none; border:none; cursor:pointer; color:#dc2626; font-size:0.75rem; font-weight:600;">✕ Remove All</button>
+            </div>
+            <div id="textbookFileList" style="display:flex; flex-wrap:wrap; gap:0.3rem; max-height:80px; overflow-y:auto;">
+            </div>
+          </div>
+        </div>
+
+        <!-- 2 & 3. Side-by-Side: Question PDF(s) and Solution PDF -->
+        <div class="dual-dropzones-row">
+          <!-- 2. Question PDF(s) -->
+          <div class="dropzone-col">
+            <div class="dropzone-col-header">
+              <span class="col-title">📄 MCQ PDF(s)</span>
+              <span class="col-hint">Primary</span>
+            </div>
+            <div class="dropzone" id="dropzone">
+              <input type="file" id="fileInput" multiple accept=".pdf" class="file-input-hidden">
+              <div class="dropzone-content">
+                <div class="upload-icon-circle">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                  </svg>
+                </div>
+                <p class="dropzone-text"><strong>Browse MCQ</strong></p>
+                <p class="dropzone-hint">Questions &amp; Options</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Solution PDF (Optional, Multiple Allowed) -->
+          <div class="dropzone-col">
+            <div class="dropzone-col-header">
+              <span class="col-title">💡 Solution PDF(s)</span>
+              <span class="col-hint" style="color: #0284c7;">Multiple Allowed</span>
+            </div>
+            <div class="dropzone" id="solutionDropzone">
+              <input type="file" id="solutionFileInput" accept=".pdf" multiple class="file-input-hidden">
+              <div class="dropzone-content">
+                <div class="upload-icon-circle" style="background:#e0f2fe; color:#0284c7;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="9" y1="13" x2="15" y2="13" />
+                  </svg>
+                </div>
+                <p class="dropzone-text"><strong>Browse Solution(s)</strong></p>
+                <p class="dropzone-hint">Answers &amp; Solutions (Auto-Paired)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Solution Files selected indicator (Supports Multiple Solution Files) -->
+        <div id="solutionFileInfo" class="hidden" style="margin-top:0.45rem; padding:0.4rem 0.6rem; background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px; font-size:0.76rem; color:#0369a1; display:flex; flex-direction:column; gap:0.3rem;">
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span id="solutionFileCount" style="font-weight:700;">Solutions (0):</span>
+            <button id="clearSolutionBtn" style="margin-left:auto; background:none; border:none; cursor:pointer; color:#dc2626; font-size:0.75rem; font-weight:600;">✕ Remove All</button>
+          </div>
+          <div id="solutionFileList" style="display:flex; flex-wrap:wrap; gap:0.3rem; max-height:80px; overflow-y:auto;">
+          </div>
+        </div>
+
+        <!-- Selected Files List -->
+        <div class="file-list" id="fileListContainer"></div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.6rem;">
+          <button id="startExtractionBtn" class="btn btn-primary btn-block">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+            <span>Start Batch Extraction</span>
+          </button>
+          <button id="checkTokensBtn" class="btn btn-secondary btn-block"
+            style="background: #f8fafc; border: 1.5px solid #cbd5e1; color: #0f172a; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.5rem 0.85rem; border-radius: 8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="2" width="16" height="20" rx="2" />
+              <line x1="8" y1="6" x2="16" y2="6" />
+              <line x1="16" y1="14" x2="16" y2="18" />
+            </svg>
+            <span>🔢 Estimate Tokens &amp; Cost</span>
+          </button>
+          <button id="clearWorkspaceBtn" class="btn btn-outline btn-block"
+            style="color: #dc2626; border: 1.5px solid #fecaca; background: #fff5f5; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.5rem 0.85rem; border-radius: 8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <span>🗑️ Clear / New Scan</span>
+          </button>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Right Results & MCQ Workspace -->
+    <section class="main-panel">
+      <!-- Progress Bar Card (Hidden by default) -->
+      <div class="card progress-card hidden" id="progressCard">
+        <div class="progress-header">
+          <div class="progress-info">
+            <span class="spinner-small"></span>
+            <span id="progressStatusText">Extracting MCQs with Gemini AI...</span>
+          </div>
+          <span class="progress-percentage" id="progressPercent">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressBar"></div>
+        </div>
+        <div class="progress-details" id="progressDetails">Preparing files...</div>
+
+        <!-- Live Model & Page Status Panel -->
+        <div id="modelStatusPanel" style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.6rem; align-items:center;">
+          <div class="model-status-chip" id="activeModelChip" style="display:inline-flex; align-items:center; gap:0.35rem; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:6px; padding:0.3rem 0.6rem; font-size:0.78rem; font-weight:600; color:#1d4ed8;">
+            <span>🤖</span><span id="activeModelLabel">Flash</span>
+          </div>
+          <div class="model-status-chip" id="pageStatusChip" style="display:inline-flex; align-items:center; gap:0.35rem; background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:6px; padding:0.3rem 0.6rem; font-size:0.78rem; font-weight:600; color:#166534;">
+            <span>📄</span><span id="pageStatusLabel">Page 0/0</span>
+          </div>
+          <div class="model-status-chip" id="questionsFoundChip" style="display:inline-flex; align-items:center; gap:0.35rem; background:#fefce8; border:1.5px solid #fde68a; border-radius:6px; padding:0.3rem 0.6rem; font-size:0.78rem; font-weight:600; color:#854d0e;">
+            <span>💡</span><span id="questionsFoundLabel">0 questions</span>
+          </div>
+          <button id="progressViewLogsBtn" class="btn btn-secondary btn-sm" style="margin-left:auto; padding:0.25rem 0.6rem; font-size:0.75rem; border-radius:6px;" title="Open real-time log terminal">
+            ⚡ View Live Logs
+          </button>
+        </div>
+
+        <!-- Model switch / quota warning banner -->
+        <div id="modelSwitchBanner" class="hidden" style="margin-top:0.6rem; padding:0.5rem 0.75rem; background:linear-gradient(135deg,#fef3c7,#fffbeb); border:1.5px solid #fbbf24; border-radius:8px; font-size:0.82rem; color:#92400e; font-weight:600;"></div>
+
+        <!-- Partial download banner (shown when both models exhaust) -->
+        <div id="partialDownloadBanner" class="hidden" style="margin-top:0.6rem; padding:0.6rem 0.9rem; background:linear-gradient(135deg,#fee2e2,#fff5f5); border:1.5px solid #fca5a5; border-radius:8px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+          <span style="font-size:0.84rem; color:#991b1b; font-weight:600;">⛔ Both models exhausted — partial results available</span>
+          <button id="partialDownloadExcelBtn" class="btn btn-sm" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;font-weight:700;padding:0.35rem 0.8rem;">⬇ Download Excel (Partial)</button>
+        </div>
+      </div>
+
+      <!-- Results Stats & Filter Bar -->
+      <div class="results-header-card card" id="resultsHeaderCard">
+        <div class="stats-row">
+          <div class="stat-box">
+            <span class="stat-value" id="statTotalQuestions">0</span>
+            <span class="stat-label">Total Questions</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-value" id="statFilesProcessed">0</span>
+            <span class="stat-label">PDF Files</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-value" id="statImageQuestions">0</span>
+            <span class="stat-label">With Diagrams/Images</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-value" id="statCompleteStatus">0</span>
+            <span class="stat-label">Complete MCQs</span>
+          </div>
+        </div>
+
+        <div class="toolbar-row">
+          <div class="search-input-wrapper">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search question text or formulas...">
+          </div>
+
+          <div class="filter-group">
+            <select id="imageFilterSelect" class="form-select select-sm">
+              <option value="all">All Questions</option>
+              <option value="with-image">Has Image/Diagram</option>
+              <option value="text-only">Text Only</option>
+            </select>
+          </div>
+
+          <!-- Marks Parameter Box (1 Mark / 4 Marks / Auto) -->
+          <div class="marks-parameter-container" id="marksParameterContainer" title="Configure Marks column value for Excel export">
+            <span class="marks-label">🎯 Marks:</span>
+            <div class="marks-pill-group" id="marksPillGroup">
+              <button type="button" class="btn-marks-pill" data-marks="1" id="marksPill1">1 Mark</button>
+              <button type="button" class="btn-marks-pill active" data-marks="4" id="marksPill4">4 Marks</button>
+              <button type="button" class="btn-marks-pill" data-marks="auto" id="marksPillAuto" title="Preserve individual question marks">Auto</button>
+            </div>
+          </div>
+
+          <div class="export-actions">
+
+            <button id="exportCsvBtn" class="btn btn-secondary btn-sm" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <path d="M8 13h2M8 17h2M14 13h2M14 17h2" />
+              </svg>
+              <span>CSV</span>
+            </button>
+            <button id="exportExcelBtn" class="btn btn-excel btn-sm" disabled
+              title="Download Microsoft Excel Sheet (.xlsx)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M9 3v18M3 9h18M3 15h18" />
+              </svg>
+              <span>Excel (.xlsx)</span>
+            </button>
+            <button id="exportPdfBtn" class="btn btn-sm" disabled
+              title="Download Formatted PDF with Questions, Options, Answers & Solutions"
+              style="background: linear-gradient(135deg,#ef4444,#dc2626); color:#fff; border:none; font-weight:600;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+              <span>PDF</span>
+            </button>
+            <button id="exportImagesBtn" class="btn btn-secondary btn-sm" disabled
+              title="Download All Extracted Diagrams & Images (.zip)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+              <span>Diagrams (.zip)</span>
+            </button>
+            <button id="viewRawJsonBtn" class="btn btn-outline btn-sm" disabled>
+              <span>{ } Raw JSON</span>
+            </button>
+            <button id="clearResultsBtn" class="btn btn-outline btn-sm" style="color: #dc2626; border-color: #fecaca; background: #fff5f5; font-weight: 600;" title="Clear workspace and start fresh">
+              <span>🗑️ New Scan</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pairwise Question & Solution PDF Verification Summary Card -->
+      <div class="card pairwise-verification-card hidden" id="pairwiseVerificationCard" style="border: 1.5px solid #cbd5e1; background: #ffffff; margin-bottom: 1.25rem;">
+        <div class="card-header" style="background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-bottom: 1px solid #e2e8f0; padding: 0.75rem 1.25rem;">
+          <h2 class="card-title" style="font-size: 0.95rem; color: #0f172a; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span>Question PDF ⟷ Solution PDF Pairwise Verification &amp; Data Check</span>
+          </h2>
+          <span class="badge" id="pairwiseSummaryBadge" style="background: #ecfdf5; color: #047857; font-weight: 700; border: 1px solid #a7f3d0;">100% Verified</span>
+        </div>
+        <div class="pairwise-container" id="pairwiseVerificationList" style="padding: 0.85rem 1.25rem; display: flex; flex-direction: column; gap: 0.6rem;"></div>
+      </div>
+
+      <!-- Processed PDF Files & Direct Download Section -->
+      <div class="card processed-files-card hidden" id="processedFilesCard">
+        <div class="card-header">
+          <h2 class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
+            <span>Extracted PDF Files &amp; Downloads</span>
+          </h2>
+          <span class="badge" id="processedFilesCountBadge">0 files</span>
+        </div>
+        <div class="processed-files-container" id="processedFilesContainer"></div>
+      </div>
+
+      <!-- Question Cards Stream -->
+      <div class="questions-stream" id="questionsStream">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-state-icon">📄</div>
+          <h3>No Questions Extracted Yet</h3>
+          <p>Upload one or more exam PDFs on the left panel and click <strong>Start Batch Extraction</strong> to view
+            questions and translations in real-time.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- API Key Modal -->
+  <div class="modal-overlay hidden" id="apiKeyModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>API Key Configuration (OpenRouter &amp; Gemini)</h3>
+        <button class="modal-close-btn" id="closeApiKeyModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">Enter your <strong>OpenRouter API Key (<code>sk-or-v1-...</code>)</strong> or <strong>Google Gemini API Key (<code>AIzaSy...</code>)</strong>. Multiple keys are supported! Separate them with commas for instant failover.</p>
+        <div class="form-group">
+          <label for="apiKeyInput">API Key(s)</label>
+          <input type="text" id="apiKeyInput" class="form-input" placeholder="sk-or-v1-..., AIzaSy...">
+          <small class="form-help">Get API keys from <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter</a> or <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelApiKeyBtn">Cancel</button>
+        <button class="btn btn-primary" id="saveApiKeyBtn">Save Key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF File Download & Options Modal -->
+  <div class="modal-overlay hidden" id="fileExportModal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-with-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="12" y1="18" x2="12" y2="12" />
+            <line x1="9" y1="15" x2="12" y2="12" />
+            <line x1="15" y1="15" x2="12" y2="12" />
+          </svg>
+          <h3 id="modalFileTitle">PDF Download Options</h3>
+        </div>
+        <button class="modal-close-btn" id="closeFileExportModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="file-modal-summary" id="modalFileSummary">
+          <!-- Summary chips injected dynamically -->
+        </div>
+
+        <!-- Marks Parameter Selection Box in Export Modal -->
+        <div class="modal-marks-selector-box" style="margin: 0.75rem 0 1rem; padding: 0.65rem 0.9rem; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.15rem;">🎯</span>
+            <div>
+              <div style="font-size: 0.82rem; font-weight: 700; color: #0f172a;">Excel Marks Parameter:</div>
+              <div style="font-size: 0.72rem; color: #64748b;">Sets the Marks value written to the Excel "Marks" column</div>
+            </div>
+          </div>
+          <div class="marks-pill-group" id="modalMarksPillGroup">
+            <button type="button" class="btn-marks-pill" data-marks="1" id="modalMarksPill1">1 Mark</button>
+            <button type="button" class="btn-marks-pill active" data-marks="4" id="modalMarksPill4">4 Marks</button>
+            <button type="button" class="btn-marks-pill" data-marks="auto" id="modalMarksPillAuto" title="Preserve individual question marks">Auto</button>
+          </div>
+        </div>
+
+        <h4 class="section-subtitle">Choose Download Format:</h4>
+        <div class="download-cards-grid">
+          <!-- Excel Card -->
+          <div class="download-format-card excel-card" id="modalDownloadExcelBtn">
+            <div class="format-icon">📊</div>
+            <div class="format-details">
+              <h4>Microsoft Excel (.xlsx)</h4>
+              <p>3 Separate Excel files: Questions, Paragraph Type, and Match the list (single sheet per file).</p>
+              <div class="advance-excel-pills" style="margin-top:0.4rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
+                <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size:0.75rem; padding:0.25rem 0.5rem; border-radius:4px; font-weight:600;">1. Questions (.xlsx)</span>
+                <span class="badge" style="background:#fef3c7; color:#b45309; font-size:0.75rem; padding:0.25rem 0.5rem; border-radius:4px; font-weight:600;">2. Paragraph Type (.xlsx)</span>
+                <span class="badge" style="background:#ede9fe; color:#6d28d9; font-size:0.75rem; padding:0.25rem 0.5rem; border-radius:4px; font-weight:600;">3. Match the list (.xlsx)</span>
+              </div>
+            </div>
+            <button class="btn btn-excel btn-sm" id="modalDownloadExcelActionBtn">Download 3 Files</button>
+          </div>
+
+          <!-- CSV Card -->
+          <div class="download-format-card csv-card" id="modalDownloadCsvBtn">
+            <div class="format-icon">📑</div>
+            <div class="format-details">
+              <h4>UTF-8 CSV (.csv)</h4>
+              <p>Standard comma-separated table compatible with all spreadsheet & database tools.</p>
+            </div>
+            <button class="btn btn-secondary btn-sm">Download .csv</button>
+          </div>
+
+          <!-- PDF Card -->
+          <div class="download-format-card" id="modalDownloadPdfBtn"
+            style="border: 2px solid #fca5a5; background: linear-gradient(135deg,#fff5f5,#fff); cursor:pointer; transition: box-shadow 0.2s;">
+            <div class="format-icon">📄</div>
+            <div class="format-details">
+              <h4 style="color:#dc2626;">Formatted PDF (Exam Style)</h4>
+              <p>Complete question paper with Options, Answers, Solution text &amp; cropped diagrams. LaTeX math rendered inline.</p>
+            </div>
+            <button class="btn btn-sm" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;font-weight:700;">Download .pdf</button>
+          </div>
+
+
+        </div>
+
+        <!-- Files list overview -->
+        <div class="processed-files-list-section" id="modalProcessedFilesSection">
+          <h4 class="section-subtitle">All Processed PDF Files:</h4>
+          <div class="processed-files-list" id="modalProcessedFilesList"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="closeFileExportFooterBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Token Usage & Cost Calculator Modal -->
+  <div class="modal-overlay hidden" id="tokenModal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-with-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="4" y="2" width="16" height="20" rx="2" />
+            <line x1="8" y1="6" x2="16" y2="6" />
+            <line x1="16" y1="14" x2="16" y2="18" />
+            <path d="M16 10h.01" />
+            <path d="M12 10h.01" />
+            <path d="M8 10h.01" />
+            <path d="M12 14h.01" />
+            <path d="M8 14h.01" />
+            <path d="M12 18h.01" />
+            <path d="M8 18h.01" />
+          </svg>
+          <h3 id="tokenModalTitle">📊 Gemini Token Usage &amp; Cost Estimation</h3>
+        </div>
+        <button class="modal-close-btn" id="closeTokenModalBtn">&times;</button>
+      </div>
+      <div class="modal-body" id="tokenModalBody">
+        <div id="tokenLoadingSpinner" style="text-align: center; padding: 2rem;">
+          <span class="spinner-small" style="width: 24px; height: 24px;"></span>
+          <p style="margin-top: 0.75rem; color: #64748b;">Calculating multimodal tokens with Gemini API...</p>
+        </div>
+        <div id="tokenReportContent" class="hidden"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="closeTokenModalFooterBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Quota & Limits Details Modal -->
+  <div class="modal-overlay hidden" id="quotaModal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-with-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          <h3>⚡ Gemini API Quota &amp; Daily Limits</h3>
+        </div>
+        <button class="modal-close-btn" id="closeQuotaModalBtn">&times;</button>
+      </div>
+      <div class="modal-body" id="quotaModalBody">
+        <!-- Live Quota Summary Card -->
+        <div class="quota-hero-card">
+          <div class="quota-gauge-col">
+            <div class="quota-percent-circle" id="quotaCircle">
+              <span class="quota-circle-number" id="quotaModalPercent">100%</span>
+              <span class="quota-circle-sub">Limit Remaining</span>
+            </div>
+          </div>
+          <div class="quota-details-col">
+            <div class="quota-stat-row">
+              <span class="q-stat-label">Daily Request Limit:</span>
+              <strong class="q-stat-val" id="qStatTotalLimit">1,500 RPD</strong>
+            </div>
+            <div class="quota-stat-row">
+              <span class="q-stat-label">Requests Used Today:</span>
+              <strong class="q-stat-val" id="qStatUsedRequests" style="color: #4f46e5;">0</strong>
+            </div>
+            <div class="quota-stat-row">
+              <span class="q-stat-label">Requests Remaining:</span>
+              <strong class="q-stat-val" id="qStatRemainingRequests" style="color: #10b981;">1,500</strong>
+            </div>
+            <div class="quota-stat-row">
+              <span class="q-stat-label">Tokens Processed Today:</span>
+              <strong class="q-stat-val" id="qStatTokensToday">0 Tokens (~₹0.00)</strong>
+            </div>
+            <div class="quota-stat-row">
+              <span class="q-stat-label">Configured API Keys:</span>
+              <strong class="q-stat-val" id="qStatKeysCount">1 Key</strong>
+            </div>
+            <div class="quota-stat-row quota-reset-row" style="background: #f1f5f9; padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px dashed #cbd5e1; margin-top: 0.35rem;">
+              <span class="q-stat-label" style="display: flex; align-items: center; gap: 5px; color: #4338ca; font-weight: 700;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Daily Limit Resets In:
+              </span>
+              <strong class="q-stat-val" id="qStatResetCountdown" style="color: #4338ca; font-weight: 800; font-size: 0.92rem;">--</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Big Visual Progress Bar -->
+        <div class="quota-bar-wrapper">
+          <div class="quota-bar-labels">
+            <span>0 used</span>
+            <span id="quotaBarRemainingLabel">100% Available</span>
+            <span id="quotaBarMaxLabel">1,500 Max</span>
+          </div>
+          <div class="quota-bar-track">
+            <div class="quota-bar-fill" id="quotaModalBarFill" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- Model Status Grid -->
+        <h4 class="section-subtitle" style="margin-top: 1.2rem; margin-bottom: 0.5rem;">Gemini Models Operational Status:</h4>
+        <div class="quota-models-grid" id="quotaModelsGrid">
+          <!-- Model cards injected dynamically -->
+        </div>
+
+        <!-- Live Ping Test Section -->
+        <div class="quota-test-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h4 class="section-subtitle" style="margin: 0;">Live API Key &amp; Quota Test:</h4>
+            <button class="btn btn-primary btn-sm" id="runQuotaTestBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>Test API Key Now</span>
+            </button>
+          </div>
+          <div id="quotaTestResultBox" class="quota-test-result hidden"></div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-secondary btn-sm" id="manageKeysFromQuotaBtn">Manage API Keys</button>
+          <button class="btn btn-secondary btn-sm" id="resetQuotaCounterBtn" title="Reset tracking counter to 0 used (100% available)">🔄 Reset Usage (0% Used)</button>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="closeQuotaModalFooterBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Raw JSON View Modal -->
+  <div class="modal-overlay hidden" id="rawJsonModal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3>Raw Master JSON Output</h3>
+        <button class="modal-close-btn" id="closeRawJsonModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="code-container">
+          <button class="btn btn-secondary btn-sm copy-btn" id="copyJsonBtn">Copy JSON</button>
+          <pre><code id="rawJsonContent" class="json-code"></code></pre>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="closeRawJsonFooterBtn">Close</button>
+        <button class="btn btn-primary" id="downloadJsonModalBtn">Download JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Logs Modal / Drawer -->
+  <div class="modal-overlay hidden" id="liveLogsModal">
+    <div class="modal-card modal-lg logs-modal-card">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <div class="terminal-icon-badge">⚡</div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.05rem;">Live System &amp; Extraction Logs</h3>
+            <span style="font-size: 0.78rem; color: #64748b;" id="logStatsSubtitle">Real-time application event stream</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <label class="logs-toggle-label" title="Automatically poll for new logs every 1.5s">
+            <input type="checkbox" id="logsAutoRefreshCheck" checked>
+            <span>Auto-refresh</span>
+          </label>
+          <label class="logs-toggle-label" title="Automatically scroll to bottom on new logs">
+            <input type="checkbox" id="logsAutoScrollCheck" checked>
+            <span>Auto-scroll</span>
+          </label>
+          <button class="modal-close-btn" id="closeLiveLogsModalBtn">&times;</button>
+        </div>
+      </div>
+
+      <!-- Logs Toolbar -->
+      <div class="logs-toolbar">
+        <div class="logs-level-filters" id="logsLevelFilters">
+          <button class="btn-filter-pill active" data-level="ALL">All (<span id="logCountAll">0</span>)</button>
+          <button class="btn-filter-pill" data-level="INFO">Info (<span id="logCountInfo">0</span>)</button>
+          <button class="btn-filter-pill" data-level="WARNING">Warn (<span id="logCountWarn">0</span>)</button>
+          <button class="btn-filter-pill" data-level="ERROR">Error (<span id="logCountError">0</span>)</button>
+        </div>
+        <div class="logs-search-wrapper">
+          <input type="text" id="logsSearchInput" placeholder="Filter logs..." class="form-input logs-search-input">
+        </div>
+        <div class="logs-actions">
+          <button class="btn btn-secondary btn-sm" id="clearLogsBtn" title="Clear log buffer">Clear</button>
+          <button class="btn btn-secondary btn-sm" id="downloadLogsBtn" title="Download app.log file">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+            </svg>
+            Download
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-body logs-modal-body">
+        <div class="terminal-window" id="terminalWindow">
+          <div class="terminal-empty" id="terminalEmpty">No logs recorded yet. Start an extraction to see live events.</div>
+          <div class="terminal-content" id="terminalContent"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.78rem; color: #64748b;" id="logFileSizeIndicator">File size: 0 KB</span>
+        <button class="btn btn-secondary" id="closeLiveLogsFooterBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js?v=6.8"></script>
+  <script src="js/ui.js?v=6.8"></script>
+  <script src="js/app.js?v=6.8"></script>
+
+  <!-- KaTeX Auto-Render: Scans DOM for $...$ and $$...$$ delimiters and renders them -->
+  <script>
+    // Re-run KaTeX auto-render on any newly added content (called by ui.js after rendering)
+    window.renderMathInPage = function(container) {
+      if (typeof renderMathInElement !== 'function') return;
+      var el = container || document.body;
+      try {
+        renderMathInElement(el, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$',  right: '$',  display: false },
+            { left: '\\(', right: '\\)', display: false },
+            { left: '\\[', right: '\\]', display: true }
+          ],
+          throwOnError: false,
+          strict: false,
+          trust: false
+        });
+      } catch(e) {
+        console.warn('KaTeX auto-render error:', e);
+      }
+    };
+  </script>
+</body>
+
+</html>
